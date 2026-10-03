@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Phantom of the Campus — Phantom Map</title>
+<link href="https://unpkg.com/maplibre-gl@5.16.0/dist/maplibre-gl.css" rel="stylesheet" />
+<style>
+:root{--bg:#0d0d12;--panel:#15151c;--text:#f5f7ff;--muted:#a9adbd;--accent:#7b4dff;--border:rgba(255,255,255,.12)}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{overflow:hidden}
+#map{position:fixed;inset:0}.veil{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,5,10,.72);backdrop-filter:blur(7px);z-index:5000}
+.card{width:min(92vw,420px);background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:22px;box-shadow:0 20px 80px rgba(0,0,0,.4)}
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:12px}.ghost{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(135deg,#3a2369,#1b1830);font-size:24px}
+h1{margin:0;font-size:22px}.sub{color:var(--muted);font-size:13px;margin-top:4px}label{display:block;margin:14px 0 7px;font-size:13px;color:#d7d9e4}
+input{width:100%;padding:12px 13px;border-radius:12px;border:1px solid var(--border);background:#0f1015;color:var(--text);outline:none}input:focus{border-color:#7d5aff;box-shadow:0 0 0 3px rgba(123,77,255,.15)}
+button{border:0;border-radius:12px;padding:12px 15px;font-weight:700;cursor:pointer}.primary{width:100%;background:#7b4dff;color:#fff;margin-top:16px}.ghostBtn{background:#22222d;color:#fff;border:1px solid var(--border)}
+.error{min-height:20px;color:#ff8a8a;font-size:12px;margin-top:8px}.topbar{position:fixed;z-index:1000;left:12px;right:12px;top:12px;display:none;align-items:center;justify-content:space-between;gap:12px}.pill{background:rgba(13,13,18,.86);border:1px solid var(--border);backdrop-filter:blur(9px);padding:10px 13px;border-radius:999px;box-shadow:0 8px 30px rgba(0,0,0,.25);font-size:13px}.pill strong{color:#fff}.actions{display:flex;gap:8px}
+.station-card{position:fixed;z-index:1001;left:12px;right:12px;bottom:12px;display:none;background:rgba(18,18,24,.96);border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:0 14px 50px rgba(0,0,0,.38);backdrop-filter:blur(12px)}.station-head{display:flex;justify-content:space-between;gap:12px}.station-title{font-size:19px;font-weight:800}.station-sub{color:#c9c5ff;font-size:12px;margin-top:4px}.station-desc{color:#d5d7e1;font-size:13px;line-height:1.45;margin:10px 0 12px}.station-row{display:flex;gap:8px;flex-wrap:wrap}.small{font-size:12px;color:var(--muted)}.map-btn{background:#7b4dff;color:#fff}.close-btn{background:#252530;color:#fff;border:1px solid var(--border)}
+.legend{position:fixed;z-index:1001;right:12px;bottom:12px;background:rgba(18,18,24,.88);border:1px solid var(--border);border-radius:14px;padding:10px 12px;font-size:11px;color:var(--muted);backdrop-filter:blur(10px)}
+.location-status{position:fixed;z-index:1100;left:12px;top:62px;display:none;max-width:min(92vw,420px);background:rgba(18,18,24,.94);border:1px solid var(--border);border-radius:14px;padding:10px 12px;font-size:12px;color:#d7d9e4;box-shadow:0 10px 30px rgba(0,0,0,.3);backdrop-filter:blur(10px)}
+.marker-ghost{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:#6c45e7;border:3px solid rgba(255,255,255,.95);box-shadow:0 5px 18px rgba(72,38,150,.45);font-size:19px}.you-dot{width:20px;height:20px;border-radius:50%;background:#2da9ff;border:3px solid #fff;box-shadow:0 0 0 8px rgba(45,169,255,.18),0 3px 14px rgba(0,0,0,.45)}
+.maplibregl-popup-content{background:#171720;color:#fff;border-radius:12px;padding:12px 14px}.maplibregl-popup-tip{border-top-color:#171720}.maplibregl-ctrl-attrib{font-size:10px!important}.maplibregl-ctrl-group{background:rgba(18,18,24,.9)!important}.maplibregl-ctrl button{filter:invert(1)}
+@media(min-width:800px){.station-card{left:auto;right:18px;width:370px;bottom:18px}.topbar{left:18px;right:18px;top:18px}.legend{right:18px;bottom:18px}}
+
+.progress-wrap{display:flex;align-items:center;gap:9px;margin-top:7px}.progress-bar{width:110px;height:7px;background:#2a2a36;border-radius:99px;overflow:hidden}.progress-fill{height:100%;width:0;background:#7b4dff;border-radius:99px;transition:width .25s ease}.progress-text{font-size:11px;color:#d7d9e4}.station-status{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:999px;background:#242431;color:#d9d9e6;font-size:11px;margin-top:9px}.station-status.done{background:rgba(60,190,120,.14);color:#aef2c9;border:1px solid rgba(60,190,120,.24)}.complete-btn{background:#7b4dff;color:#fff;flex:1;min-width:200px}.complete-btn.done{background:#1f533a;color:#baf4cf;cursor:default}.reward-btn{background:#f4b23d;color:#151515}.modal{position:fixed;z-index:5200;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,5,10,.76);backdrop-filter:blur(8px);padding:18px}.modal-card{width:min(92vw,420px);background:#15151c;border:1px solid var(--border);border-radius:20px;padding:22px;box-shadow:0 24px 90px rgba(0,0,0,.46);text-align:center}.modal-card h2{margin:0 0 7px;font-size:24px}.modal-card p{color:#c8cad6;font-size:13px;line-height:1.5}.qr-box{display:flex;justify-content:center;background:#fff;border-radius:14px;padding:14px;width:max-content;margin:15px auto}.code-box{font-size:25px;letter-spacing:3px;font-weight:900;padding:13px 15px;border:1px dashed rgba(255,255,255,.24);border-radius:13px;background:#101117;margin:14px 0}.demo-note{font-size:11px;color:#979aaa;line-height:1.45}.toolbar-btn{white-space:nowrap}.marker-ghost.done{background:#246845;box-shadow:0 5px 18px rgba(36,104,69,.45)}
+@media(max-width:700px){.topbar{align-items:flex-start}.topbar .pill:first-child{max-width:calc(100vw - 120px)}.topbar .pill:first-child span{display:none}.actions{gap:6px}.actions .pill{padding:9px 10px}.station-row .complete-btn{width:100%;min-width:0}.station-card{padding-bottom:calc(16px + env(safe-area-inset-bottom))}.legend{bottom:calc(12px + env(safe-area-inset-bottom));font-size:10px;max-width:200px}.progress-bar{width:85px}}
+
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="loginVeil" class="veil"><div class="card">
+  <div class="brand"><div class="ghost">👻</div><div><h1>PHANTOM OF THE CAMPUS</h1><div class="sub">Phantom Map — bản thử nghiệm</div></div></div>
+  <div class="sub">Nhập thông tin để xác nhận bạn nằm trong danh sách tham gia.</div>
+  <label for="mssv">MSSV</label><input id="mssv" placeholder="VD: 221xxxxxx" autocomplete="off" />
+  <label for="fullname">Họ và tên</label><input id="fullname" placeholder="VD: Nguyễn Văn A" autocomplete="name" />
+  <div id="loginError" class="error"></div><button id="loginBtn" class="primary">ENTER THE CAMPUS</button>
+  <div class="small" style="margin-top:10px">Demo: DEMO001 / Nguyễn Văn A · DEMO002 / Trần Thị B · DEMO003 / Lê Văn C</div><div class="demo-note" style="margin-top:8px">Prototype mode: trạng thái trạm được lưu trên thiết bị để mô phỏng luồng sự kiện.</div>
+</div></div>
+<div id="topbar" class="topbar">
+  <div class="pill"><div>👻 <strong id="welcome"></strong></div><div class="progress-wrap"><div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div><span id="progressText" class="progress-text">0/6</span><button id="qrBtn" class="ghostBtn toolbar-btn" style="padding:6px 9px;font-size:11px">▦ QR của tôi</button></div></div>
+  <div class="actions"><button class="pill ghostBtn" id="locateBtn">📍</button><button class="pill ghostBtn" id="logoutBtn">Đăng xuất</button></div>
+</div>
+<div id="locationStatus" class="location-status">📍 Đang xác định vị trí…</div>
+<div id="stationCard" class="station-card"><div class="station-head"><div><div class="station-title" id="sTitle"></div><div class="station-sub" id="sSub"></div><div class="small" id="sSlogan" style="margin-top:6px;color:#f0e9ff;font-style:italic"></div><div id="sStatus" class="station-status">⏳ Chưa chinh phục</div></div><button class="close-btn" id="closeStation">✕</button></div><div class="station-desc" id="sDesc"></div><div class="small" id="sPlace"></div><div class="station-row" style="margin-top:12px"><button class="complete-btn" id="completeBtn">✅ BTC xác nhận hoàn thành (Demo)</button><button class="map-btn" id="routeBtn">🧭 Chỉ đường</button><button class="ghostBtn" id="openGoogleBtn">Google Maps</button></div></div>
+<div class="legend">👻 Trạm Phantom · 🔵 YOU ARE HERE<br>Vòng xanh = độ chính xác GPS · Route: pedestrian</div>
+<div id="qrModal" class="modal"><div class="modal-card"><h2>▦ QR ĐỊNH DANH</h2><p>Mã này đại diện cho người tham gia trong bản demo. Khi triển khai thật, BTC có thể quét QR này để xác nhận hoàn thành từng trạm.</p><div class="qr-box"><div id="qrcode"></div></div><div id="qrLabel" class="small"></div><button id="closeQr" class="ghostBtn" style="margin-top:14px;width:100%">Đóng</button></div></div>
+<div id="rewardModal" class="modal"><div class="modal-card"><div style="font-size:44px">👻🎉</div><h2>PHANTOM DEFEATED!</h2><p>Chúc mừng <strong id="rewardName"></strong>! Cậu đã chinh phục đủ 6 trạm.</p><div class="small">Mã đổi quà của cậu</div><div id="rewardCode" class="code-box">PH-000000</div><p class="demo-note">Trong triển khai thật, mã này được tạo sau khi hệ thống xác nhận đủ 6/6 trạm và được dùng tại quầy đổi quà.</p><button id="closeReward" class="primary" style="margin-top:4px">🎁 Đã hiểu</button></div></div>
+
+<script src="https://unpkg.com/maplibre-gl@5.16.0/dist/maplibre-gl.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const participants=[{mssv:'DEMO001',name:'Nguyễn Văn A'},{mssv:'DEMO002',name:'Trần Thị B'},{mssv:'DEMO003',name:'Lê Văn C'}];
+const stations=[
+{id:1,name:'TIME TRAP',subtitle:'Time Management',slogan:'Don’t let time trap you.',lat:10.87038,lng:106.77774,desc:'Tạo lịch 3 ngày tiếp theo trên công cụ lịch số, có task, deadline và reminder.',place:'Trạm 1'},
+{id:2,name:'THE NEVER-ENDING TASK',subtitle:'Study Habits',slogan:'Break the cycle. Get it done.',lat:10.87062,lng:106.77816,desc:'Thử một cách học chủ động bằng công cụ học tập số.',place:'Trạm 2'},
+{id:3,name:'HOUSE OF CHAOS',subtitle:'Campus Culture & Conduct',slogan:'One small act. Chaos follows.',lat:10.87166,lng:106.77796,desc:'Xử lý các tình huống campus và xem hậu quả của từng lựa chọn.',place:'Trạm 3'},
+{id:4,name:'MONEY PIT',subtitle:'Finance',slogan:'Watch your money before it’s gone.',lat:10.8716,lng:106.77945,desc:'Tạo budget cá nhân và phân bổ tiền bằng công cụ quản lý chi tiêu.',place:'Trạm 4'},
+{id:5,name:'WEB OF LIES',subtitle:'Online Safety',slogan:'Think twice before you click.',lat:10.87071,lng:106.77894,desc:'Nhận diện tín hiệu lừa đảo/phishing và thực hành bảo mật tài khoản.',place:'Trạm 5'},
+{id:6,name:'THE SOCIAL WALL',subtitle:'Inclusion & Relationships',slogan:'Break the wall. Make a connection.',lat:10.87052,lng:106.77962,desc:'Thử một hoạt động phá băng và tạo kết nối mới với sinh viên khác.',place:'Trạm 6'}];
+
+// OpenFreeMap: vector basemap, no API key, designed for web/app use.
+// Source: https://openfreemap.org/  |  Attribution is required.
+const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[106.77862,10.87095],zoom:17,attributionControl:false});
+map.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-left');
+map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:'OpenFreeMap © OpenMapTiles Data from OpenStreetMap'}),'bottom-right');
+let selectedStation=null,userMarker=null,accuracySourceReady=false,watchId=null;
+const stationMarkers=new Map();
+let qrcodeInstance=null;
+const stationBounds=new maplibregl.LngLatBounds();
+stations.forEach(s=>stationBounds.extend([s.lng,s.lat]));
+
+function markerElement(cls,html){const e=document.createElement('div');e.className=cls;e.innerHTML=html;return e;}
+function openStation(s){
+  selectedStation=s;
+  document.getElementById('sTitle').textContent='👻 '+s.name;
+  document.getElementById('sSub').textContent=s.subtitle;
+  document.getElementById('sSlogan').textContent='“'+s.slogan+'”';
+  document.getElementById('sDesc').textContent=s.desc;
+  document.getElementById('sPlace').textContent=`📍 ${s.place} · ${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}`;
+  refreshStationCard();
+  document.getElementById('stationCard').style.display='block';
+}
+function progressKey(user){return `phantomProgress:${user.mssv}`;}
+function getProgress(user){try{return JSON.parse(localStorage.getItem(progressKey(user))||'[]').filter(id=>stations.some(s=>s.id===id));}catch(e){return [];}}
+function saveProgress(user,ids){localStorage.setItem(progressKey(user),JSON.stringify([...new Set(ids)]));}
+function getRewardCode(user){const base=String(user.mssv).split('').reduce((a,ch)=>a+ch.charCodeAt(0),0)+stations.length*97;return 'PH-'+String((base*731)%1000000).padStart(6,'0');}
+function refreshProgressUI(){
+  const user=getCurrentUser(); if(!user)return;
+  const done=getProgress(user); const count=done.length;
+  document.getElementById('progressText').textContent=`${count}/6`;
+  document.getElementById('progressFill').style.width=`${(count/6)*100}%`;
+  stations.forEach(s=>{const el=stationMarkers.get(s.id); if(el) el.classList.toggle('done',done.includes(s.id));});
+  if(selectedStation) refreshStationCard();
+}
+function refreshStationCard(){
+  const user=getCurrentUser(); if(!user||!selectedStation)return;
+  const done=getProgress(user).includes(selectedStation.id);
+  const status=document.getElementById('sStatus'),btn=document.getElementById('completeBtn');
+  status.textContent=done?'✅ Đã chinh phục':'⏳ Chưa chinh phục';
+  status.classList.toggle('done',done);
+  btn.disabled=done;
+  btn.classList.toggle('done',done);
+  btn.textContent=done?'✅ Đã hoàn thành trạm (Demo)':'✅ BTC xác nhận hoàn thành (Demo)';
+}
+function getCurrentUser(){try{const s=localStorage.getItem('phantomUser');return s?JSON.parse(s):null;}catch(e){return null;}}
+function completeSelectedStation(){
+  const user=getCurrentUser(); if(!user||!selectedStation)return;
+  const ids=getProgress(user);
+  if(ids.includes(selectedStation.id))return;
+  ids.push(selectedStation.id); saveProgress(user,ids); refreshProgressUI();
+  showLocationStatus(`Đã ghi nhận ${selectedStation.name}: ${ids.length}/6.`,true);
+  if(ids.length===6) setTimeout(showRewardModal,350);
+}
+function showRewardModal(){
+  const user=getCurrentUser(); if(!user)return;
+  document.getElementById('rewardName').textContent=user.name;
+  document.getElementById('rewardCode').textContent=getRewardCode(user);
+  document.getElementById('rewardModal').style.display='flex';
+}
+function showQrModal(){
+  const user=getCurrentUser(); if(!user)return;
+  document.getElementById('qrModal').style.display='flex';
+  document.getElementById('qrLabel').textContent=`ID: ${user.mssv} · ${user.name}`;
+  const target=document.getElementById('qrcode'); target.innerHTML='';
+  if(window.QRCode){qrcodeInstance=new QRCode(target,{text:`PHANTOM-DEMO:${user.mssv}`,width:170,height:170,colorDark:'#111111',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}
+  else{target.textContent='QR library chưa tải được.';}
+}
+
+function showLocationStatus(message,good=false){const el=document.getElementById('locationStatus');el.textContent=(good?'✅ ':'📍 ')+message;el.style.display='block';clearTimeout(window.__locStatusTimer);window.__locStatusTimer=setTimeout(()=>el.style.display='none',7000);}
+function circlePolygon(lng,lat,radiusMeters,points=64){const coords=[];const R=6371008.8;const rad=radiusMeters/R;const lat1=lat*Math.PI/180,lng1=lng*Math.PI/180;for(let i=0;i<=points;i++){const b=2*Math.PI*i/points;const lat2=Math.asin(Math.sin(lat1)*Math.cos(rad)+Math.cos(lat1)*Math.sin(rad)*Math.cos(b));const lng2=lng1+Math.atan2(Math.sin(b)*Math.sin(rad)*Math.cos(lat1),Math.cos(rad)-Math.sin(lat1)*Math.sin(lat2));coords.push([lng2*180/Math.PI,lat2*180/Math.PI]);}return {type:'Feature',geometry:{type:'Polygon',coordinates:[coords]}};}
+function setAccuracyCircle(lat,lng,accuracy){const src=map.getSource('accuracy');const data=circlePolygon(lng,lat,Math.max(accuracy||0,5));if(src)src.setData(data);else{map.addSource('accuracy',{type:'geojson',data});map.addLayer({id:'accuracy-fill',type:'fill',source:'accuracy',paint:{'fill-color':'#2da9ff','fill-opacity':0.08}});map.addLayer({id:'accuracy-line',type:'line',source:'accuracy',paint:{'line-color':'#2da9ff','line-width':1,'line-opacity':0.7}});}}
+function setUser(lat,lng,accuracy){if(!userMarker){userMarker=new maplibregl.Marker({element:markerElement('you-dot','')}).setLngLat([lng,lat]).setPopup(new maplibregl.Popup({offset:14}).setText('🔵 YOU ARE HERE')).addTo(map);}else userMarker.setLngLat([lng,lat]);if(Number.isFinite(accuracy))setAccuracyCircle(lat,lng,accuracy);}
+function handleGeoError(err){let msg='Không lấy được vị trí.';if(err&&err.code===1)msg='Bạn đã chặn quyền vị trí. Hãy bật Location cho website rồi bấm lại.';else if(err&&err.code===2)msg='Thiết bị chưa xác định được vị trí. Hãy bật Wi‑Fi/GPS và thử lại.';else if(err&&err.code===3)msg='Xác định vị trí quá lâu. Hãy thử lại.';if(!window.isSecureContext&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')msg='GPS của trình duyệt cần HTTPS hoặc localhost.';showLocationStatus(msg,false);}
+function locateOnce(){if(!navigator.geolocation){showLocationStatus('Trình duyệt không hỗ trợ định vị.',false);return;}showLocationStatus('Đang xin quyền vị trí…',false);navigator.geolocation.getCurrentPosition(pos=>{setUser(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy);map.flyTo({center:[pos.coords.longitude,pos.coords.latitude],zoom:18,duration:700});showLocationStatus(`Đã định vị. Độ chính xác khoảng ${Math.round(pos.coords.accuracy||0)} m.`,true);},handleGeoError,{enableHighAccuracy:true,timeout:15000,maximumAge:0});}
+function watchLocation(){if(!navigator.geolocation)return;if(watchId)navigator.geolocation.clearWatch(watchId);watchId=navigator.geolocation.watchPosition(pos=>setUser(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy),handleGeoError,{enableHighAccuracy:true,maximumAge:2000,timeout:15000});}
+function drawRoute(coords){if(map.getLayer('route-line'))map.removeLayer('route-line');if(map.getSource('route'))map.removeSource('route');map.addSource('route',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:coords}}});map.addLayer({id:'route-line',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#2da9ff','line-width':6,'line-opacity':0.88}});}
+async function routeToSelected(){if(!selectedStation)return;if(!userMarker){locateOnce();showLocationStatus('Đang lấy vị trí. Khi chấm xanh xuất hiện, bấm “Chỉ đường tới trạm” lại nhé.',false);return;}const start=userMarker.getLngLat(),dest=selectedStation;const url=`https://routing.openstreetmap.de/routed-foot/route/v1/driving/${start.lng},${start.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson&steps=true`;try{const res=await fetch(url);if(!res.ok)throw new Error('Routing request failed');const data=await res.json();if(!data.routes||!data.routes.length)throw new Error('No route');const r=data.routes[0];drawRoute(r.geometry.coordinates);const bounds=new maplibregl.LngLatBounds();r.geometry.coordinates.forEach(c=>bounds.extend(c));map.fitBounds(bounds,{padding:70,maxZoom:19,duration:600});const km=(r.distance/1000).toFixed(2),mins=Math.max(1,Math.round(r.duration/60));new maplibregl.Popup({offset:18}).setLngLat([dest.lng,dest.lat]).setHTML(`<strong>👻 ${dest.name}</strong><br>🚶 ${mins} phút · ${km} km`).addTo(map);}catch(e){alert('Chưa lấy được tuyến đi bộ từ dữ liệu bản đồ hiện tại. Bạn vẫn có thể mở Google Maps để xem đường đi.');}}
+function initStations(){stations.forEach(s=>{const el=markerElement('marker-ghost','👻');const marker=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([s.lng,s.lat]).setPopup(new maplibregl.Popup({offset:24}).setHTML(`<strong>👻 ${s.name}</strong><br><span style="color:#bdb6ff">${s.subtitle}</span><br><small>${s.place}</small>`)).addTo(map);el.addEventListener('click',()=>openStation(s));});map.fitBounds(stationBounds,{padding:{top:110,bottom:110,left:35,right:35},maxZoom:18,duration:0});}
+map.on('load',initStations);
+
+document.getElementById('loginBtn').addEventListener('click',()=>{const mssv=document.getElementById('mssv').value.trim().toUpperCase(),fullname=document.getElementById('fullname').value.trim().toLowerCase();const found=participants.find(p=>p.mssv===mssv&&p.name.toLowerCase()===fullname);if(!found){document.getElementById('loginError').textContent='Không tìm thấy người tham gia. Kiểm tra lại MSSV và họ tên.';return;}localStorage.setItem('phantomUser',JSON.stringify(found));enterMap(found);});
+function enterMap(user){document.getElementById('loginVeil').style.display='none';document.getElementById('topbar').style.display='flex';document.getElementById('welcome').textContent=user.name;refreshProgressUI();locateOnce();watchLocation();}
+document.getElementById('locateBtn').addEventListener('click',locateOnce);
+document.getElementById('qrBtn').addEventListener('click',showQrModal);
+document.getElementById('closeQr').addEventListener('click',()=>document.getElementById('qrModal').style.display='none');
+document.getElementById('closeReward').addEventListener('click',()=>document.getElementById('rewardModal').style.display='none');
+document.getElementById('completeBtn').addEventListener('click',completeSelectedStation);
+document.getElementById('logoutBtn').addEventListener('click',()=>{localStorage.removeItem('phantomUser');if(watchId)navigator.geolocation.clearWatch(watchId);location.reload();});
+document.getElementById('closeStation').addEventListener('click',()=>document.getElementById('stationCard').style.display='none');
+document.getElementById('routeBtn').addEventListener('click',routeToSelected);
+document.getElementById('openGoogleBtn').addEventListener('click',()=>{if(!selectedStation)return;window.open(`https://www.google.com/maps/dir/?api=1&destination=${selectedStation.lat},${selectedStation.lng}&travelmode=walking`,'_blank');});
+const saved=localStorage.getItem('phantomUser');if(saved){try{enterMap(JSON.parse(saved));}catch(e){}}
+</script>
+</body>
+</html>
