@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Phantom of the Campus — Phantom Map MVP</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root{--bg:#0d0d12;--panel:#15151c;--text:#f5f7ff;--muted:#a9adbd;--accent:#7b4dff;--border:rgba(255,255,255,.12)}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{overflow:hidden}
+#map{position:fixed;inset:0}.veil{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,5,10,.72);backdrop-filter:blur(7px);z-index:5000}
+.card{width:min(92vw,420px);background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:22px;box-shadow:0 20px 80px rgba(0,0,0,.4)}
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:12px}.ghost{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(135deg,#3a2369,#1b1830);font-size:24px}
+h1{margin:0;font-size:22px}.sub{color:var(--muted);font-size:13px;margin-top:4px}label{display:block;margin:14px 0 7px;font-size:13px;color:#d7d9e4}
+input{width:100%;padding:12px 13px;border-radius:12px;border:1px solid var(--border);background:#0f1015;color:var(--text);outline:none}
+input:focus{border-color:#7d5aff;box-shadow:0 0 0 3px rgba(123,77,255,.15)}
+button{border:0;border-radius:12px;padding:12px 15px;font-weight:700;cursor:pointer}.primary{width:100%;background:#7b4dff;color:#fff;margin-top:16px}.ghostBtn{background:#22222d;color:#fff;border:1px solid var(--border)}
+.error{min-height:20px;color:#ff8a8a;font-size:12px;margin-top:8px}
+.topbar{position:fixed;z-index:1000;left:12px;right:12px;top:12px;display:none;align-items:center;justify-content:space-between;gap:12px}
+.pill{background:rgba(13,13,18,.86);border:1px solid var(--border);backdrop-filter:blur(9px);padding:10px 13px;border-radius:999px;box-shadow:0 8px 30px rgba(0,0,0,.25);font-size:13px}.pill strong{color:#fff}.actions{display:flex;gap:8px}
+.station-card{position:fixed;z-index:1001;left:12px;right:12px;bottom:12px;display:none;background:rgba(18,18,24,.96);border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:0 14px 50px rgba(0,0,0,.38);backdrop-filter:blur(12px)}
+.station-head{display:flex;justify-content:space-between;gap:12px}.station-title{font-size:19px;font-weight:800}.station-sub{color:#c9c5ff;font-size:12px;margin-top:4px}.station-desc{color:#d5d7e1;font-size:13px;line-height:1.45;margin:10px 0 12px}
+.station-row{display:flex;gap:8px;flex-wrap:wrap}.small{font-size:12px;color:var(--muted)}.map-btn{background:#7b4dff;color:#fff}.close-btn{background:#252530;color:#fff;border:1px solid var(--border)}
+.legend{position:fixed;z-index:1001;right:12px;bottom:12px;background:rgba(18,18,24,.88);border:1px solid var(--border);border-radius:14px;padding:10px 12px;font-size:11px;color:var(--muted);backdrop-filter:blur(10px)}
+.leaflet-control-attribution{font-size:10px}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#171720;color:#fff}.leaflet-popup-content{margin:12px 14px}
+.marker-ghost{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:#6c45e7;border:3px solid rgba(255,255,255,.95);box-shadow:0 5px 18px rgba(72,38,150,.45);font-size:19px}
+.location-status{position:fixed;z-index:1100;left:12px;top:62px;display:none;max-width:min(92vw,420px);background:rgba(18,18,24,.94);border:1px solid var(--border);border-radius:14px;padding:10px 12px;font-size:12px;color:#d7d9e4;box-shadow:0 10px 30px rgba(0,0,0,.3);backdrop-filter:blur(10px)}
+.you-dot{width:20px;height:20px;border-radius:50%;background:#2da9ff;border:3px solid #fff;box-shadow:0 0 0 8px rgba(45,169,255,.18),0 3px 14px rgba(0,0,0,.45)}
+@media(min-width:800px){.station-card{left:auto;right:18px;width:370px;bottom:18px}.topbar{left:18px;right:18px;top:18px}.legend{right:18px;bottom:18px}}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="loginVeil" class="veil">
+  <div class="card">
+    <div class="brand"><div class="ghost">👻</div><div><h1>PHANTOM OF THE CAMPUS</h1><div class="sub">Phantom Map — bản thử nghiệm</div></div></div>
+    <div class="sub">Nhập thông tin để xác nhận bạn nằm trong danh sách tham gia.</div>
+    <label for="mssv">MSSV</label>
+    <input id="mssv" placeholder="VD: 221xxxxxx" autocomplete="off" />
+    <label for="fullname">Họ và tên</label>
+    <input id="fullname" placeholder="VD: Nguyễn Văn A" autocomplete="name" />
+    <div id="loginError" class="error"></div>
+    <button id="loginBtn" class="primary">ENTER THE CAMPUS</button>
+    <div class="small" style="margin-top:10px">Demo: danh sách mẫu nằm trong file và có thể thay bằng database thật.</div>
+  </div>
+</div>
+
+<div id="topbar" class="topbar">
+  <div class="pill">👻 <strong id="welcome"></strong> · <span>Campus: 15,9 ha · chu vi 1,63 km</span></div>
+  <div class="actions"><button class="pill ghostBtn" id="locateBtn">📍 Vị trí của tôi</button><button class="pill ghostBtn" id="logoutBtn">Đăng xuất</button></div>
+</div>
+
+<div id="locationStatus" class="location-status">📍 Đang xác định vị trí…</div>
+
+<div id="stationCard" class="station-card">
+  <div class="station-head"><div><div class="station-title" id="sTitle"></div><div class="station-sub" id="sSub"></div><div class="small" id="sSlogan" style="margin-top:6px;color:#f0e9ff;font-style:italic"></div></div><button class="close-btn" id="closeStation">✕</button></div>
+  <div class="station-desc" id="sDesc"></div>
+  <div class="small" id="sPlace"></div>
+  <div class="station-row" style="margin-top:12px"><button class="map-btn" id="routeBtn">🧭 Chỉ đường tới trạm</button><button class="ghostBtn" id="openGoogleBtn">Google Maps</button></div>
+</div>
+
+<div class="legend">👻 Trạm Phantom · 🔵 YOU ARE HERE<br>Vòng xanh = độ chính xác GPS · Route: pedestrian</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const participants = [{"mssv": "DEMO001", "name": "Nguyễn Văn A"}, {"mssv": "DEMO002", "name": "Trần Thị B"}, {"mssv": "DEMO003", "name": "Lê Văn C"}];
+const stations = [{"id": 1, "name": "TIME TRAP", "subtitle": "Time Management", "slogan": "Don’t let time trap you.", "lat": 10.87038, "lng": 106.77774, "desc": "Tạo lịch 3 ngày tiếp theo trên công cụ lịch số, có task, deadline và reminder.", "place": "Trạm 1"}, {"id": 2, "name": "THE NEVER-ENDING TASK", "subtitle": "Study Habits", "slogan": "Break the cycle. Get it done.", "lat": 10.87062, "lng": 106.77816, "desc": "Thử một cách học chủ động bằng công cụ học tập số.", "place": "Trạm 2"}, {"id": 3, "name": "HOUSE OF CHAOS", "subtitle": "Campus Culture & Conduct", "slogan": "One small act. Chaos follows.", "lat": 10.87166, "lng": 106.77796, "desc": "Xử lý các tình huống campus và xem hậu quả của từng lựa chọn.", "place": "Trạm 3"}, {"id": 4, "name": "MONEY PIT", "subtitle": "Finance", "slogan": "Watch your money before it’s gone.", "lat": 10.8716, "lng": 106.77945, "desc": "Tạo budget cá nhân và phân bổ tiền bằng công cụ quản lý chi tiêu.", "place": "Trạm 4"}, {"id": 5, "name": "WEB OF LIES", "subtitle": "Online Safety", "slogan": "Think twice before you click.", "lat": 10.87071, "lng": 106.77894, "desc": "Nhận diện tín hiệu lừa đảo/phishing và thực hành bảo mật tài khoản.", "place": "Trạm 5"}, {"id": 6, "name": "THE SOCIAL WALL", "subtitle": "Inclusion & Relationships", "slogan": "Break the wall. Make a connection.", "lat": 10.87052, "lng": 106.77962, "desc": "Thử một hoạt động phá băng và tạo kết nối mới với sinh viên khác.", "place": "Trạm 6"}];
+
+const map = L.map('map',{zoomControl:false}).setView([10.87095,106.77862],17);
+L.control.zoom({position:'bottomleft'}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+
+const ghostIcon=L.divIcon({className:'',html:'<div class="marker-ghost">👻</div>',iconSize:[38,38],iconAnchor:[19,19],popupAnchor:[0,-18]});
+let selectedStation=null,userMarker=null,routeLayer=null,watchId=null;
+
+stations.forEach(s=>{
+  L.marker([s.lat,s.lng],{icon:ghostIcon}).addTo(map)
+   .bindPopup(`<strong>👻 ${s.name}</strong><br><span style="color:#bdb6ff">${s.subtitle}</span><br><small>${s.place}</small>`)
+   .on('click',()=>openStation(s));
+});
+map.fitBounds(L.latLngBounds(stations.map(s=>[s.lat,s.lng])).pad(0.08));
+
+function openStation(s){
+  selectedStation=s;
+  document.getElementById('sTitle').textContent='👻 '+s.name;
+  document.getElementById('sSub').textContent=s.subtitle;
+  document.getElementById('sSlogan').textContent='“'+s.slogan+'”';
+  document.getElementById('sDesc').textContent=s.desc;
+  document.getElementById('sPlace').textContent=`📍 ${s.place} · ${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}`;
+  document.getElementById('stationCard').style.display='block';
+}
+function showLocationStatus(message, good=false){
+  const el=document.getElementById('locationStatus');
+  el.textContent=(good?'✅ ':'📍 ')+message;
+  el.style.display='block';
+  clearTimeout(window.__locStatusTimer);
+  window.__locStatusTimer=setTimeout(()=>{el.style.display='none';}, 7000);
+}
+
+let accuracyCircle=null;
+function setUser(lat,lng,accuracy=null){
+  const latlng=[lat,lng];
+  if(!userMarker){
+    const userIcon=L.divIcon({className:'',html:'<div class="you-dot"></div>',iconSize:[20,20],iconAnchor:[10,10]});
+    userMarker=L.marker(latlng,{icon:userIcon,zIndexOffset:1000}).addTo(map).bindTooltip('🔵 YOU ARE HERE');
+  }else userMarker.setLatLng(latlng);
+  if(accuracy && isFinite(accuracy)){
+    if(!accuracyCircle){
+      accuracyCircle=L.circle(latlng,{radius:accuracy,color:'#2da9ff',weight:1,fillColor:'#2da9ff',fillOpacity:.08}).addTo(map);
+    }else{
+      accuracyCircle.setLatLng(latlng);accuracyCircle.setRadius(accuracy);
+    }
+  }
+}
+function handleGeoError(err){
+  let msg='Không lấy được vị trí.';
+  if(err && err.code===1) msg='Bạn đã chặn quyền vị trí. Hãy bật Location cho website rồi bấm lại.';
+  else if(err && err.code===2) msg='Thiết bị chưa xác định được vị trí. Hãy bật Wi‑Fi/GPS và thử lại.';
+  else if(err && err.code===3) msg='Xác định vị trí quá lâu. Hãy thử lại.';
+  if(!window.isSecureContext && location.hostname!=='localhost' && location.hostname!=='127.0.0.1'){
+    msg='GPS của trình duyệt cần HTTPS hoặc localhost. Bản demo đang mở từ file nên chưa thể ghim vị trí.';
+  }
+  showLocationStatus(msg,false);
+}
+function locateOnce(){
+  if(!navigator.geolocation){showLocationStatus('Trình duyệt không hỗ trợ định vị.',false);return;}
+  showLocationStatus('Đang xin quyền vị trí…',false);
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      setUser(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy);
+      map.setView([pos.coords.latitude,pos.coords.longitude],18);
+      showLocationStatus(`Đã định vị. Độ chính xác khoảng ${Math.round(pos.coords.accuracy||0)} m.`,true);
+    },
+    handleGeoError,
+    {enableHighAccuracy:true,timeout:15000,maximumAge:0}
+  );
+}
+function watchLocation(){
+  if(!navigator.geolocation)return;
+  if(watchId) navigator.geolocation.clearWatch(watchId);
+  watchId=navigator.geolocation.watchPosition(
+    pos=>setUser(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy),
+    handleGeoError,
+    {enableHighAccuracy:true,maximumAge:2000,timeout:15000}
+  );
+}
+async function routeToSelected(){
+  if(!selectedStation)return;
+  if(!userMarker){locateOnce();showLocationStatus('Đang lấy vị trí. Khi chấm xanh xuất hiện, bấm “Chỉ đường tới trạm” lại nhé.',false);return;}
+  if(routeLayer){map.removeLayer(routeLayer);routeLayer=null;}
+  const start=userMarker.getLatLng(),dest=selectedStation;
+  const url=`https://routing.openstreetmap.de/routed-foot/route/v1/driving/${start.lng},${start.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson&steps=true`;
+  try{
+    const res=await fetch(url);
+    if(!res.ok)throw new Error('Routing request failed');
+    const data=await res.json();
+    if(!data.routes||!data.routes.length)throw new Error('No route');
+    const r=data.routes[0];
+    routeLayer=L.geoJSON(r.geometry,{style:{color:'#2da9ff',weight:7,opacity:.85}}).addTo(map);
+    map.fitBounds(routeLayer.getBounds().pad(.12));
+    const km=(r.distance/1000).toFixed(2), mins=Math.max(1,Math.round(r.duration/60));
+    L.popup().setLatLng([dest.lat,dest.lng]).setContent(`<strong>👻 ${dest.name}</strong><br>🚶 ${mins} phút · ${km} km`).openOn(map);
+  }catch(e){
+    alert('Chưa lấy được tuyến đi bộ từ dữ liệu bản đồ hiện tại. Bạn vẫn có thể mở Google Maps để xem đường đi.');
+  }
+}
+
+document.getElementById('loginBtn').addEventListener('click',()=>{
+  const mssv=document.getElementById('mssv').value.trim().toUpperCase();
+  const fullname=document.getElementById('fullname').value.trim().toLowerCase();
+  const found=participants.find(p=>p.mssv.toUpperCase()===mssv&&p.name.toLowerCase()===fullname);
+  if(!found){document.getElementById('loginError').textContent='Không tìm thấy người tham gia. Kiểm tra lại MSSV và họ tên.';return;}
+  localStorage.setItem('phantomUser',JSON.stringify(found));enterMap(found);
+});
+function enterMap(user){
+  document.getElementById('loginVeil').style.display='none';
+  document.getElementById('topbar').style.display='flex';
+  document.getElementById('welcome').textContent=user.name;
+  locateOnce();watchLocation();
+}
+document.getElementById('locateBtn').addEventListener('click',locateOnce);
+document.getElementById('logoutBtn').addEventListener('click',()=>{localStorage.removeItem('phantomUser');if(watchId)navigator.geolocation.clearWatch(watchId);location.reload();});
+document.getElementById('closeStation').addEventListener('click',()=>{document.getElementById('stationCard').style.display='none';map.closePopup();});
+document.getElementById('routeBtn').addEventListener('click',routeToSelected);
+document.getElementById('openGoogleBtn').addEventListener('click',()=>{if(!selectedStation)return;window.open(`https://www.google.com/maps/dir/?api=1&destination=${selectedStation.lat},${selectedStation.lng}&travelmode=walking`,'_blank');});
+
+const saved=localStorage.getItem('phantomUser');if(saved){try{enterMap(JSON.parse(saved));}catch{}}
+</script>
+</body>
+</html>
